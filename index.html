@@ -1,0 +1,479 @@
+#        COMBINED IMAGE PROCESSING PRACTICAL
+# Practical 1: Python Environment and Required Libraries
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import heapq
+from collections import Counter
+# LOAD IMAGE
+image_path = "input.jpg"
+
+img = cv2.imread(image_path)
+
+if img is None:
+    print("Error: Image not found!")
+    exit()
+
+print("Image loaded successfully.")
+print("Image size:", img.shape)
+
+# PRACTICAL 2
+# RGB / GRAYSCALE + ARITHMETIC + BITWISE OPERATIONS
+
+print("\n--- PRACTICAL 2: IMAGE OPERATIONS ---")
+# BGR to RGB
+rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+# RGB to Grayscale
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+# Arithmetic Operation - Addition
+bright = cv2.add(img, np.ones_like(img) * 40)
+# Arithmetic Operation - Subtraction
+dark = cv2.subtract(img, np.ones_like(img) * 40)
+# Create mask
+mask = np.zeros(gray.shape, dtype=np.uint8)
+h, w = gray.shape
+cv2.rectangle(
+    mask,
+    (w // 4, h // 4),
+    (3 * w // 4, 3 * h // 4),
+    255,
+    -1
+)
+
+# Bitwise Operations
+bitwise_and = cv2.bitwise_and(img, img, mask=mask)
+bitwise_or = cv2.bitwise_or(img, img, mask=mask)
+bitwise_xor = cv2.bitwise_xor(img, img, mask=mask)
+
+# PRACTICAL 3
+# GEOMETRIC TRANSFORMATIONS
+
+print("\n--- PRACTICAL 3: GEOMETRIC TRANSFORMATIONS ---")
+
+# Translation
+M = np.float32([
+    [1, 0, 50],
+    [0, 1, 30]
+])
+
+translation = cv2.warpAffine(img, M, (w, h))
+# Rotation
+rotation_matrix = cv2.getRotationMatrix2D(
+    (w // 2, h // 2),
+    45,
+    1
+)
+rotation = cv2.warpAffine(
+    img,
+    rotation_matrix,
+    (w, h)
+)
+# Scaling
+scaling = cv2.resize(
+    img,
+    None,
+    fx=0.5,
+    fy=0.5
+)
+# Shearing
+shear_matrix = np.float32([
+    [1, 0.3, 0],
+    [0.2, 1, 0]
+])
+
+shearing = cv2.warpAffine(
+    img,
+    shear_matrix,
+    (w, h)
+)
+# Reflection
+reflection = cv2.flip(img, 1)
+# Cropping
+cropping = img[
+    h // 4:3 * h // 4,
+    w // 4:3 * w // 4
+]
+
+# PRACTICAL 4
+# IMAGE ENHANCEMENT
+
+print("\n--- PRACTICAL 4: IMAGE ENHANCEMENT ---")
+
+# Histogram Equalization
+hist_equalized = cv2.equalizeHist(gray)
+
+# Smoothing
+smoothing = cv2.GaussianBlur(
+    gray,
+    (5, 5),
+    0
+)
+# Sharpening
+sharpen_kernel = np.array([
+    [0, -1, 0],
+    [-1, 5, -1],
+    [0, -1, 0]
+])
+sharpening = cv2.filter2D(
+    gray,
+    -1,
+    sharpen_kernel
+)
+# Thresholding
+_, threshold = cv2.threshold(
+    gray,
+    127,
+    255,
+    cv2.THRESH_BINARY
+)
+
+# PRACTICAL 5
+# SPATIAL FILTERS
+
+print("\n--- PRACTICAL 5: SPATIAL FILTERS ---")
+
+# Averaging Filter
+average_filter = cv2.blur(
+    img,
+    (5, 5)
+)
+# Gaussian Filter
+gaussian_filter = cv2.GaussianBlur(
+    img,
+    (5, 5),
+    0
+)
+# Median Filter
+median_filter = cv2.medianBlur(
+    img,
+    5
+)
+# Bilateral Filter
+bilateral_filter = cv2.bilateralFilter(
+    img,
+    9,
+    75,
+    75
+)
+
+# PRACTICAL 6
+# IMAGE RESTORATION / INPAINTING
+
+print("\n--- PRACTICAL 6: IMAGE RESTORATION ---")
+
+# Create a damage mask
+inpaint_mask = np.zeros(
+    gray.shape,
+    dtype=np.uint8
+)
+
+# Artificial damaged region
+cv2.rectangle(
+    inpaint_mask,
+    (w // 3, h // 3),
+    (w // 2, h // 2),
+    255,
+    -1
+)
+# Telea Method
+telea_result = cv2.inpaint(
+    img,
+    inpaint_mask,
+    3,
+    cv2.INPAINT_TELEA
+)
+
+# Navier-Stokes Method
+ns_result = cv2.inpaint(
+    img,
+    inpaint_mask,
+    3,
+    cv2.INPAINT_NS
+)
+
+# PRACTICAL 7
+# LOSSLESS HUFFMAN COMPRESSION
+
+print("\n--- PRACTICAL 7: LOSSLESS COMPRESSION ---")
+
+# Read image as binary data
+with open(image_path, "rb") as file:
+    data = file.read()
+
+# Frequency of each byte
+frequency = Counter(data)
+
+# Create Huffman tree
+heap = [
+    [freq, [symbol, ""]]
+    for symbol, freq in frequency.items()
+]
+
+heapq.heapify(heap)
+
+if len(heap) == 1:
+
+    heap[0][1][1] = "0"
+
+else:
+
+    while len(heap) > 1:
+
+        low = heapq.heappop(heap)
+        high = heapq.heappop(heap)
+
+        for pair in low[1:]:
+            pair[1] = "0" + pair[1]
+
+        for pair in high[1:]:
+            pair[1] = "1" + pair[1]
+
+        heapq.heappush(
+            heap,
+            [low[0] + high[0]]
+            + low[1:]
+            + high[1:]
+        )
+
+
+# Generate Huffman codes
+huffman_codes = dict(heap[0][1:])
+
+# Encode data
+encoded_data = ""
+
+for byte in data:
+    encoded_data += huffman_codes[byte]
+
+# Calculate compressed size
+compressed_size = (len(encoded_data) + 7) // 8
+
+original_size = len(data)
+
+print("Original File Size:",
+      original_size,
+      "bytes")
+
+print("Compressed File Size:",
+      compressed_size,
+      "bytes")
+
+if original_size > 0:
+
+    compression_ratio = (
+        compressed_size / original_size
+    )
+
+    space_saved = (
+        1 - compression_ratio
+    ) * 100
+
+    print(
+        "Compression Ratio:",
+        round(compression_ratio, 3)
+    )
+
+    print(
+        "Space Saved:",
+        round(space_saved, 2),
+        "%"
+    )
+
+# PRACTICAL 8
+# MORPHOLOGICAL OPERATIONS
+
+print("\n--- PRACTICAL 8: MORPHOLOGICAL OPERATIONS ---")
+
+# Binary image
+binary = threshold
+
+# Structuring Element
+kernel = np.ones(
+    (5, 5),
+    np.uint8
+)
+
+# Erosion
+erosion = cv2.erode(
+    binary,
+    kernel,
+    iterations=1
+)
+
+# Dilation
+dilation = cv2.dilate(
+    binary,
+    kernel,
+    iterations=1
+)
+
+# Opening
+opening = cv2.morphologyEx(
+    binary,
+    cv2.MORPH_OPEN,
+    kernel
+)
+
+# Closing
+closing = cv2.morphologyEx(
+    binary,
+    cv2.MORPH_CLOSE,
+    kernel
+)
+
+# PRACTICAL 9
+# OBJECT DETECTION USING CORRELATION
+
+print("\n--- PRACTICAL 9: CORRELATION OBJECT DETECTION ---")
+
+# Create a template from the center region
+template = gray[
+    h // 4:h // 2,
+    w // 4:w // 2
+]
+
+# Template Matching / Correlation
+correlation_result = cv2.matchTemplate(
+    gray,
+    template,
+    cv2.TM_CCOEFF_NORMED
+)
+
+# Find best matching location
+_, max_value, _, max_location = cv2.minMaxLoc(
+    correlation_result
+)
+
+template_h, template_w = template.shape
+
+top_left = max_location
+
+bottom_right = (
+    top_left[0] + template_w,
+    top_left[1] + template_h
+)
+
+# Draw rectangle around detected object
+detected_image = img.copy()
+
+cv2.rectangle(
+    detected_image,
+    top_left,
+    bottom_right,
+    (0, 255, 0),
+    2
+)
+
+print(
+    "Maximum Correlation:",
+    round(max_value, 3)
+)
+
+print(
+    "Object detected at:",
+    top_left
+)
+
+# DISPLAY RESULTS
+# ---------- Image Operations ----------
+plt.figure(figsize=(12, 8))
+
+plt.subplot(2, 4, 1)
+plt.imshow(rgb)
+plt.title("RGB")
+plt.axis("off")
+
+plt.subplot(2, 4, 2)
+plt.imshow(gray, cmap="gray")
+plt.title("Grayscale")
+plt.axis("off")
+
+plt.subplot(2, 4, 3)
+plt.imshow(cv2.cvtColor(bright, cv2.COLOR_BGR2RGB))
+plt.title("Addition")
+plt.axis("off")
+
+plt.subplot(2, 4, 4)
+plt.imshow(cv2.cvtColor(dark, cv2.COLOR_BGR2RGB))
+plt.title("Subtraction")
+plt.axis("off")
+
+plt.subplot(2, 4, 5)
+plt.imshow(cv2.cvtColor(bitwise_and, cv2.COLOR_BGR2RGB))
+plt.title("AND")
+plt.axis("off")
+
+plt.subplot(2, 4, 6)
+plt.imshow(cv2.cvtColor(bitwise_or, cv2.COLOR_BGR2RGB))
+plt.title("OR")
+plt.axis("off")
+
+plt.subplot(2, 4, 7)
+plt.imshow(cv2.cvtColor(bitwise_xor, cv2.COLOR_BGR2RGB))
+plt.title("XOR")
+plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+# ---------- Geometric Transformations ----------
+plt.figure(figsize=(12, 8))
+transformations = [
+    (translation, "Translation"),
+    (rotation, "Rotation"),
+    (scaling, "Scaling"),
+    (shearing, "Shearing"),
+    (reflection, "Reflection"),
+    (cropping, "Cropping")
+]
+for i, (image, title) in enumerate(transformations):
+
+    plt.subplot(2, 3, i + 1)
+
+    plt.imshow(
+        cv2.cvtColor(
+            image,
+            cv2.COLOR_BGR2RGB
+        )
+    )
+
+    plt.title(title)
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+# ---------- Enhancement ----------
+plt.figure(figsize=(12, 7))
+
+enhancement = [
+    (gray, "Original"),
+    (hist_equalized, "Histogram Equalization"),
+    (smoothing, "Smoothing"),
+    (sharpening, "Sharpening"),
+    (threshold, "Thresholding")
+]
+
+for i, (image, title) in enumerate(enhancement):
+
+    plt.subplot(2, 3, i + 1)
+
+    plt.imshow(
+        image,
+        cmap="gray"
+    )
+
+    plt.title(title)
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+# ---------- Spatial Filters ----------
+plt.figure(figsize=(12, 7))
+
+filters = [
+    (img, "Original"),
+    (average_filter, "Averaging"),
+    (gaussian_filter, "Gaussian"),
+    (median_filter, "Median"),
+    (bilateral_filter, "Bilateral")
